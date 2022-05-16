@@ -31,9 +31,14 @@ def CVaR_DP(task, # MDP
     Nr = task.Nr
     alpha0_i = np.where(alpha_set==alpha0)[0]
 
+    # state action value/ q value
     Q_CVaR = np.zeros((Ns,Na,Nalpha,T))
+    # distortion weights?
+    # parameters of the distorted value func
     Xis = np.zeros((Ns,Na,Nalpha,Nr,Ns,T))
+    # state value
     V_CVaR = np.zeros((Ns,Nalpha,T))
+    # policy
     pi = np.zeros((Ns,Na,Nalpha,T))
 
     #------------------------------------#
@@ -57,6 +62,7 @@ def CVaR_DP(task, # MDP
         else:
             map_results = []
             for s in states_to_iterate:
+                print('updating Q values for state {} at time {}'.format(s, t))
                 Q_CVaR_tmp,Xis_tmp =  Update_Q_Values(s,t,V_CVaR,Nalpha,Na,Nr,
                                         Ns,T,alpha_set,task,cvar_type,gamma,same_answer_ns)
                 map_results.append((Q_CVaR_tmp,Xis_tmp))

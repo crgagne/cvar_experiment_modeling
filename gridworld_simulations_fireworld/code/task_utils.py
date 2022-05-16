@@ -1,6 +1,3 @@
-
-
-
 import numpy as np
 
 def action_str_to_num(a):
@@ -216,25 +213,25 @@ def get_next_state_prob_from_maze(s_idcs,
     return(s1_probs)
 
 
-def build_P_from_maze(maze,Ns,Na,noise_mode,err_prob,
-                      absorbing_states,terminal_state,order='C',
-                      add_termin_up=False,up_termin_prob=0.05):
+def build_P_from_maze(maze, n_states, n_actions, noise_mode, err_prob,
+                      absorbing_states, terminal_state, order='C',
+                      add_termin_up=False, up_termin_prob=0.05):
 
-    P = np.zeros((Ns,Ns,Na))
+    P = np.zeros((n_states, n_states, n_actions))
 
-    for s in range(Ns):
+    for s in range(n_states):
 
         # get state index
         s_idcs = state2idcs(s, maze, order=order)
 
-        for a in range(Na):
+        for a in range(n_actions):
 
             # get next state probabilities
             s1_prob = get_next_state_prob_from_maze(s_idcs,a,maze,noise_mode,err_prob,order=order)
 
             # deal with aborbing states; probability = [0,0,0,..,1]; terminal state is always last state
             if s in absorbing_states or s==terminal_state:
-                s1_prob = np.zeros(Ns)
+                s1_prob = np.zeros(n_states)
                 s1_prob[-1] = 1
 
             # add probs

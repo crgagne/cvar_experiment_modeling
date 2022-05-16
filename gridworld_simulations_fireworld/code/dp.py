@@ -13,6 +13,167 @@ break_early2=0
 total=0
 
 
+def CVaR_DP(task,
+            T=3,
+            alpha0=0.3,
+            alpha_set = np.array([0,0.01,0.05,0.1,0.2,0.3,0.5,0.7,0.9,1.0]),
+            cvar_type='pCVaR',
+            gamma=1.0,
+            interp_type='V',
+            policy_to_evaluate=None,
+            Q_roundoff=4,
+            verbose=True,
+            mode='fast',
+            parallel=False):
+
+
+    if mode=='fast':
+        # alpha_set = np.array([0,0.01,0.05,0.1,0.2,0.3,0.5,0.7,0.9,1.0])
+        same_answer_ns=1
+
+    else:
+        # alpha_set = np.array([0.        , 0.01      , 0.01274275, 0.01623777, 0.02069138,
+        #                        0.02636651, 0.03359818, 0.04281332, 0.05455595, 0.06951928,
+        #                        0.08858668, 0.11288379, 0.14384499, 0.18329807, 0.23357215,
+        #                        0.29763514, 0.37926902, 0.48329302, 0.61584821, 0.78475997,
+        #                        1.        ])
+        same_answer_ns=3
+
+
+    n_states = task.n_states
+    n_actions = task.n_actions
+    Nalpha = len(alpha_set)
+    n_rewards = task.n_rewards
+
+    alpha0_i = np.where(alpha_set==alpha0)[0]
+
+    # q values at for every state action pair for each timestep and alpha
+    Q_CVaR = np.zeros((n_states,n_actions,Nalpha,T))
+    # what is this for?
+    Xis = np.zeros((n_states,n_actions,Nalpha,n_rewards,n_states,T))
+    # same for statevalues
+    V_CVaR = np.zeros((n_states,Nalpha,T))
+
+    pi = np.zeros((n_states,n_actions,Nalpha,T))
+
+    ######################################
+    # work backwards from last time step #
+    ######################################
+
+    for t in reversed(range(0,T)):
+
+        if verbose:
+            print('t='+str(t))
+
+        ##################################
+        ## Update State,Action Q-Values ##
+        #################################
+
+
+        # these are just all the states
+        states_to_iterate = task.states_allowed_at_time(t)
+        #print(states_to_iterate)
+
+        # loop over state space
+        if parallel:
+            with Pool(multiprocessing.cpu_count()) as p:
+                map_results = p.starmap(Update_Q_Values, [(s,t,V_CVaR,Nalpha,n_actions,n_rewards,
+                  n_states,T,alpha_set,task,cvar_type,gamma,interp_type,same_answer_ns) for s in states_to_iterate] )
+        else:
+            map_results = []
+            for s in states_to_iterate:
+                Q_CVaR_tmp,Xis_tmp =  Update_Q_Values(s,t,V_CVaR,Nalpha,n_actions,n_rewards,
+                                        n_states,T,alpha_set,task,cvar_type,gamma,interp_type,same_answer_ns)
+                map_results.append((Q_CVaR_tmp,Xis_tmp))
+
+        # unpack
+        for s in states_to_iterate:
+            Q_CVaR[s,:,:,t] = map_results[s][0]
+            Xis[s,:,:,:,:,t] = map_results[s][1]
+
+        ####################################
+        ## Update State Values and Policy ##
+        ####################################
+
+        # loop over state space
+        states_to_iterate = task.states_allowed_at_time(t)
+        for s in states_to_iterate: # I could also maybe just do states to consider each round..
+
+            # loop over possible alphas
+            alphas_to_iterate = range(Nalpha)
+            for alpha_i in alphas_to_iterate:
+
+                alpha = alpha_set[alpha_i]
+
+                ## update policy ##
+                if policy_to_evaluate is None:
+                    if cvar_type=='fCVaR':
+
+                        actions_allowed = np.array(task.actions_allowed_in_state(s))
+
+                        # No matter what alpha level you are in the loop, use the alpha0_i to determine policy
+                        Q_CVaR[s,:,alpha0_i,t] = np.round(Q_CVaR[s,:,alpha0_i,t],Q_roundoff)
+                        Q_best_alpha0 = np.max(Q_CVaR[s,actions_allowed,alpha0_i,t])
+                        best_actions = np.where(np.squeeze(Q_CVaR[s,:,alpha0_i,t])==Q_best_alpha0)[0]
+
+                        filter=np.isin(best_actions,actions_allowed)
+                        best_actions = best_actions[filter]
+
+                        # (implicit tie-breaker to choose the first option)
+                        # usually its a single action anyway
+                        best_action = best_actions[0]
+
+                        # create policy for current alpha level in loop
+                        pi[s,:,alpha_i,t]=0.0
+                        pi[s,best_action,alpha_i,t]=1.0
+
+                        # update CVaR state value using state,action value using current alpha in loop (transfering distribution from chosen action)
+                        Q_best = Q_CVaR[s,best_action,alpha_i,t]
+                        V_CVaR[s,alpha_i,t] = Q_best
+
+
+                    elif cvar_type=='pCVaR' or cvar_type=='nCVaR':
+
+                        # ADDING: NOT 100% Vetted
+                        actions_allowed = np.array(task.actions_allowed_in_state(s))
+
+                        # otherwise use alpha_i
+                        Q_CVaR[s,:,alpha_i,t] = np.round(Q_CVaR[s,:,alpha_i,t],Q_roundoff) # round Q-values so that 'numerical ties' are obvious; not necessary but cleaner for looking at policy
+                        Q_best = np.max(Q_CVaR[s,actions_allowed,alpha_i,t])
+                        best_actions = np.where(np.squeeze(Q_CVaR[s,:,alpha_i,t])==Q_best)[0]
+
+                        filter=np.isin(best_actions,actions_allowed)
+                        best_actions = best_actions[filter]
+
+                        # (implicit tie-breaker to choose the first option)
+                        # usually its a single action anyway
+                        best_action = best_actions[0]
+
+                        # create policy
+                        pi[s,:,alpha_i,t]=0.0
+                        pi[s,best_action,alpha_i,t]=1.0
+
+                        ## update CVaR value
+                        V_CVaR[s,alpha_i,t] = Q_best
+
+                ## evaluate existing policy ##
+                else:
+                    # improper for stochastic policies
+                    V_CVaR[s,alpha_i,t] =  np.sum(policy_to_evaluate[s,:,alpha_i,t]*Q_CVaR[s,:,alpha_i,t])
+
+    output = {}
+    output['Q_CVaR']=Q_CVaR
+    output['pi']=pi
+    output['V_CVaR']=V_CVaR
+    output['Xis']=Xis
+
+    print(total)
+    print(break_early1)
+    print(break_early2)
+
+    return output
+
+
 def interpolate_V(V,state_next,alpha_next,alpha_set,t,debug=False):
     '''Interpolates CVaR value function between alpha levels.
        Returns V(s,alpha)
@@ -218,7 +379,7 @@ def Q_backup_horizon(rewards,
     assert len(rewards)==len(p_rewards)
 
     if alpha==0.0:
-
+        #print(rewards)
         minR = np.min(rewards)
         minR_idcs = np.where(rewards==minR)[0]
 
@@ -265,9 +426,9 @@ def Update_Q_Values(s,
                     t,
                     V_CVaR,
                     Nalpha,
-                    Na,
-                    Nr,
-                    Ns,
+                    n_actions,
+                    n_rewards,
+                    n_states,
                     T,
                     alpha_set,
                     task,
@@ -279,11 +440,12 @@ def Update_Q_Values(s,
 
 
 
-    Q_CVaR_tmp = np.zeros((Na,Nalpha))
-    Xis_tmp = np.zeros((Na,Nalpha,Nr,Ns))
+    Q_CVaR_tmp = np.zeros((n_actions, Nalpha))
+    Xis_tmp = np.zeros((n_actions, Nalpha, n_rewards, n_states))
 
     # loop over possible alphas
     alphas_to_iterate = range(Nalpha)
+    #print('update Q values at step: {}, state{}'.format(t,s))
     for alpha_i in alphas_to_iterate:
 
 
@@ -297,8 +459,9 @@ def Update_Q_Values(s,
         # Q: what does this except statement want to catch
         try:
             actions_to_iterate = task.actions_allowed_in_state(s)
+
         except:
-            actions_to_iterate = range(Na)
+            actions_to_iterate = range(n_actions)
 
         for a in actions_to_iterate:
 
@@ -309,23 +472,25 @@ def Update_Q_Values(s,
                 # if s==6 and alpha==0.11288379:
                 #    import pdb; pdb.set_trace()
                 # get possible rewards current state
-                non_zero_reward_idcs = np.where(task.p_r[s,:]!=0.0)[0] # where probability is not zero
+                non_zero_reward_idcs = np.where(task.p_rewards[s,:]!=0.0)[0] # where probability is not zero
+
                 rewards = task.r_support[non_zero_reward_idcs]
-                p_rewards = task.p_r[s,non_zero_reward_idcs]
+                p_rewards = task.p_rewards[s,non_zero_reward_idcs]
+
 
                 Q_CVaR_tmp[a,alpha_i],xis,success = Q_backup_horizon(np.array(rewards),
                                                          np.array(p_rewards),
                                                          alpha,
                                                          alpha_set)
 
-                Xis_tmp[a,alpha_i,non_zero_reward_idcs,:]=np.tile(xis[:,np.newaxis],Ns)
+                Xis_tmp[a,alpha_i,non_zero_reward_idcs,:]=np.tile(xis[:,np.newaxis], n_states)
 
             else:
 
                 # get possible rewards current state
-                non_zero_reward_idcs = np.where(task.p_r[s,:]!=0.0)[0] # where probability is not zero
+                non_zero_reward_idcs = np.where(task.p_rewards[s,:]!=0.0)[0] # where probability is not zero
                 rewards = task.r_support[non_zero_reward_idcs]
-                p_rewards = task.p_r[s,non_zero_reward_idcs]
+                p_rewards = task.p_rewards[s,non_zero_reward_idcs]
 
                 # get next states with non-zero transition prob
                 next_states = np.where(task.P[s,:,a]!=0.0)[0]
@@ -359,160 +524,4 @@ def Update_Q_Values(s,
 
     return Q_CVaR_tmp,Xis_tmp
 
-def CVaR_DP(task,
-            T=3,
-            alpha0=0.3,
-            alpha_set = np.array([0,0.01,0.05,0.1,0.2,0.3,0.5,0.7,0.9,1.0]),
-            cvar_type='pCVaR',
-            gamma=1.0,
-            interp_type='V',
-            policy_to_evaluate=None,
-            Q_roundoff=4,
-            verbose=True,
-            mode='fast',
-            parallel=False):
 
-
-    if mode=='fast':
-        # alpha_set = np.array([0,0.01,0.05,0.1,0.2,0.3,0.5,0.7,0.9,1.0])
-        same_answer_ns=1
-
-    else:
-        # alpha_set = np.array([0.        , 0.01      , 0.01274275, 0.01623777, 0.02069138,
-        #                        0.02636651, 0.03359818, 0.04281332, 0.05455595, 0.06951928,
-        #                        0.08858668, 0.11288379, 0.14384499, 0.18329807, 0.23357215,
-        #                        0.29763514, 0.37926902, 0.48329302, 0.61584821, 0.78475997,
-        #                        1.        ])
-        same_answer_ns=3
-
-
-    Ns = task.Ns
-    Na = task.Na
-    Nalpha = len(alpha_set)
-    Nr = task.Nr
-    alpha0_i = np.where(alpha_set==alpha0)[0]
-
-    # q values at for every state action pair for each timestep and alpha
-    Q_CVaR = np.zeros((Ns,Na,Nalpha,T))
-    # what is this for?
-    Xis = np.zeros((Ns,Na,Nalpha,Nr,Ns,T))
-    # same for statevalues
-    V_CVaR = np.zeros((Ns,Nalpha,T))
-
-    pi = np.zeros((Ns,Na,Nalpha,T))
-
-    ######################################
-    # work backwards from last time step #
-    ######################################
-
-    for t in reversed(range(0,T)):
-
-        if verbose:
-            print('t='+str(t))
-
-        ##################################
-        ## Update State,Action Q-Values ##
-        #################################
-
-
-        # these are just all the states
-        states_to_iterate = task.states_allowed_at_time(t)
-
-        # loop over state space
-        if parallel:
-            with Pool(multiprocessing.cpu_count()) as p:
-                map_results = p.starmap(Update_Q_Values, [(s,t,V_CVaR,Nalpha,Na,Nr,
-                  Ns,T,alpha_set,task,cvar_type,gamma,interp_type,same_answer_ns) for s in states_to_iterate] )
-        else:
-            map_results = []
-            for s in states_to_iterate:
-                Q_CVaR_tmp,Xis_tmp =  Update_Q_Values(s,t,V_CVaR,Nalpha,Na,Nr,
-                                        Ns,T,alpha_set,task,cvar_type,gamma,interp_type,same_answer_ns)
-                map_results.append((Q_CVaR_tmp,Xis_tmp))
-
-        # unpack
-        for s in states_to_iterate:
-            Q_CVaR[s,:,:,t] = map_results[s][0]
-            Xis[s,:,:,:,:,t] = map_results[s][1]
-
-        ####################################
-        ## Update State Values and Policy ##
-        ####################################
-
-        # loop over state space
-        states_to_iterate = task.states_allowed_at_time(t)
-        for s in states_to_iterate: # I could also maybe just do states to consider each round..
-
-            # loop over possible alphas
-            alphas_to_iterate = range(Nalpha)
-            for alpha_i in alphas_to_iterate:
-
-                alpha = alpha_set[alpha_i]
-
-                ## update policy ##
-                if policy_to_evaluate is None:
-                    if cvar_type=='fCVaR':
-
-                        actions_allowed = np.array(task.actions_allowed_in_state(s))
-
-                        # No matter what alpha level you are in the loop, use the alpha0_i to determine policy
-                        Q_CVaR[s,:,alpha0_i,t] = np.round(Q_CVaR[s,:,alpha0_i,t],Q_roundoff)
-                        Q_best_alpha0 = np.max(Q_CVaR[s,actions_allowed,alpha0_i,t])
-                        best_actions = np.where(np.squeeze(Q_CVaR[s,:,alpha0_i,t])==Q_best_alpha0)[0]
-
-                        filter=np.isin(best_actions,actions_allowed)
-                        best_actions = best_actions[filter]
-
-                        # (implicit tie-breaker to choose the first option)
-                        # usually its a single action anyway
-                        best_action = best_actions[0]
-
-                        # create policy for current alpha level in loop
-                        pi[s,:,alpha_i,t]=0.0
-                        pi[s,best_action,alpha_i,t]=1.0
-
-                        # update CVaR state value using state,action value using current alpha in loop (transfering distribution from chosen action)
-                        Q_best = Q_CVaR[s,best_action,alpha_i,t]
-                        V_CVaR[s,alpha_i,t] = Q_best
-
-
-                    elif cvar_type=='pCVaR' or cvar_type=='nCVaR':
-
-                        # ADDING: NOT 100% Vetted
-                        actions_allowed = np.array(task.actions_allowed_in_state(s))
-
-                        # otherwise use alpha_i
-                        Q_CVaR[s,:,alpha_i,t] = np.round(Q_CVaR[s,:,alpha_i,t],Q_roundoff) # round Q-values so that 'numerical ties' are obvious; not necessary but cleaner for looking at policy
-                        Q_best = np.max(Q_CVaR[s,actions_allowed,alpha_i,t])
-                        best_actions = np.where(np.squeeze(Q_CVaR[s,:,alpha_i,t])==Q_best)[0]
-
-                        filter=np.isin(best_actions,actions_allowed)
-                        best_actions = best_actions[filter]
-
-                        # (implicit tie-breaker to choose the first option)
-                        # usually its a single action anyway
-                        best_action = best_actions[0]
-
-                        # create policy
-                        pi[s,:,alpha_i,t]=0.0
-                        pi[s,best_action,alpha_i,t]=1.0
-
-                        ## update CVaR value
-                        V_CVaR[s,alpha_i,t] = Q_best
-
-                ## evaluate existing policy ##
-                else:
-                    # improper for stochastic policies
-                    V_CVaR[s,alpha_i,t] =  np.sum(policy_to_evaluate[s,:,alpha_i,t]*Q_CVaR[s,:,alpha_i,t])
-
-    output = {}
-    output['Q_CVaR']=Q_CVaR
-    output['pi']=pi
-    output['V_CVaR']=V_CVaR
-    output['Xis']=Xis
-
-    print(total)
-    print(break_early1)
-    print(break_early2)
-
-    return(output)

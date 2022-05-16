@@ -132,12 +132,15 @@ def Q_backup(next_states,
             fun_mins = []
 
             # repeat the distorted expectation calculation multiple times
+
+            # why reapeat multiple times?
             for _ in range(max_inner_iters):
 
                 # distortion weight initial values
                 n_probs = len(prob_next_state_reward_pairs)
 
                 # initial values: uniform in probability simplex
+                # dirichlet distributions creates vector that sums up to 1
                 dist_probs_init = np.random.dirichlet(np.ones(n_probs),size=1)[0]
                 dist_weights_init = dist_probs_init/np.array(prob_next_state_reward_pairs)
                 assert np.abs(sum_to_1_constraint(dist_weights_init))<1e-4
