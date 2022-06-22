@@ -72,6 +72,7 @@ def CVaR_DP(task,
 
         # these are just all the states
         states_to_iterate = task.states_allowed_at_time(t)
+        print(states_to_iterate)
         #print(states_to_iterate)
 
         # loop over state space

@@ -140,28 +140,27 @@ class TaskFireWorld:
 
     def states_allowed_at_time(self, t):
         # all states are allowed, except wall states
-        return [s for s in range(self.n_states) if s not in self.wall_locations]
-
-    #def actions_allowed_in_state(self, s):
-    #    # you can not go inside walls and outside the grid
-    #    allowed_actions = []
-    #    i_coord, j_coord = state2idcs(s , self.maze)
-    #    for action in ['up', 'down', 'right', 'left']:
-    #        if action == 'up':  # up
-    #            s1_idcs = [i_coord - 1, j_coord]
-    #        elif action == 'down':  #  down
-    #            s1_idcs = [i_coord + 1, j_coord]
-    #        elif action == 'right':  #  right
-    #            s1_idcs = [i_coord, j_coord + 1]
-    #        else:  # left
-    #            s1_idcs = [i_coord, j_coord - 1]
-    #        s1_idcs = return_same_state_if_boundary([i_coord, j_coord], s1_idcs, self.maze)
-    #        if not np.array_equal([[i_coord, j_coord], s1_idcs]):
-    #            allowed_actions.append(action_str_to_num(action))
-    #    return allowed_actions
+        #return [s for s in range(self.n_states) if s not in self.wall_locations]
+        return [s for s in range(self.n_states)]
 
     def actions_allowed_in_state(self, s):
-        return [0, 1, 2, 3]
+        # you can not go inside walls and outside the grid
+        allowed_actions = []
+        i_coord, j_coord = state2idcs(s , self.maze)
+        for action in ['up', 'down', 'right', 'left']:
+            if action == 'up':  # up
+                s1_idcs = [i_coord - 1, j_coord]
+            elif action == 'down':  #  down
+                s1_idcs = [i_coord + 1, j_coord]
+            elif action == 'right':  #  right
+                s1_idcs = [i_coord, j_coord + 1]
+            else:  # left
+                s1_idcs = [i_coord, j_coord - 1]
+            s1_idcs = return_same_state_if_boundary([i_coord, j_coord], s1_idcs, self.maze)
+            if not np.array_equal([i_coord, j_coord], s1_idcs):
+                allowed_actions.append(action_str_to_num(action))
+        return allowed_actions
+
 
 
 

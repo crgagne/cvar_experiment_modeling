@@ -18,7 +18,7 @@ import gc
 
 ### fireworld_1: first implementation of the environment, allows for doing nothing by moving outside the world
 ### fireworld_2: different branch, does not allow moving outside the world
-save_stem = 'fireworld_1'
+save_stem = 'fireworld_2'
 
 
 ### Wrapper functions for computing policies, generating behavior and plotting for a selected task
@@ -26,7 +26,7 @@ save_stem = 'fireworld_1'
 
 def main():
     # select task to use
-    task = example_tasks.task_six
+    task = example_tasks.task_five
     only_plot = False
     gamma = 0.9
     time_horizon = 60
@@ -39,7 +39,7 @@ def main():
                                   1.])
 
     # choose a subset of alphas
-    alpha0_i_set = [1, 11, 14, 16, 19]
+    alpha0_i_set = [1, 3, 5, 7, 11, 14, 16, 17, 19]
     alpha0_set = [interpolation_set[i] for i in alpha0_i_set]
     # alpha_set = [interpolation_set[i] for i in alpha0_i_set]
     alpha_set = interpolation_set
@@ -55,11 +55,11 @@ def main():
     # compute policies
     if not only_plot:
         path_dict = compute_policies(task=task, task_name=task.task_name, alpha_set=alpha_set, alpha0_set=alpha0_set,
-                                     time_horizon=time_horizon, model_names=['pCVaR', 'nCVaR', 'fCVaR'], gamma=gamma, parallel=parallel)
+                                     time_horizon=time_horizon, model_names=['nCVaR'], gamma=gamma, parallel=parallel)
 
     # create behavior and plot
     plot_task(task=task, task_name=task.task_name, alpha_set=alpha_set, alpha0_set=alpha0_set,
-              alpha_plot_set=alpha_plot_set, model_names=['pCVaR', 'nCVaR', 'fCVaR'])
+              alpha_plot_set=alpha_plot_set, model_names=['nCVaR'])
     return None
 
 
@@ -283,3 +283,5 @@ def plot_task(task,
 
 if __name__ == '__main__':
     main()
+
+
