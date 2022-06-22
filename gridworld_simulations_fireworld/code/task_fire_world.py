@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.stats import norm
-from task_utils import state2idcs, build_P_from_maze
+from task_utils import state2idcs, build_P_from_maze, return_same_state_if_boundary, state2idcs, action_str_to_num
 
 
 class TaskFireWorld:
@@ -18,6 +18,7 @@ class TaskFireWorld:
                  fire_locations=[12],
                  goal_locations=[14],
                  wall_locations=[],
+                 task_name=None,
                  err_prob=0.05,
                  step_penalty=-0.1,
                  noise_mode='adjacent_noisy',
@@ -33,11 +34,11 @@ class TaskFireWorld:
             number of columns
         start_location: int
             starting location of agent
-        fire_locations: int
+        fire_locations: list
             location of firepits
-        goal_locations : int
+        goal_locations : list
             location of goal
-        wall_locations : int
+        wall_locations : list
             location of walls
         err_prob : float
             probability of unintended action
@@ -48,6 +49,7 @@ class TaskFireWorld:
         order
             either 'C': columns first or rows first
         """
+        self.task_name = task_name
         # number of states
         self.n_states = nrows * ncols + 1  # with terminal state
         # array representing world
@@ -137,10 +139,29 @@ class TaskFireWorld:
         return np.array2string(reward_maze)
 
     def states_allowed_at_time(self, t):
-        return [s for s in range(self.n_states)]
+        # all states are allowed, except wall states
+        return [s for s in range(self.n_states) if s not in self.wall_locations]
+
+    #def actions_allowed_in_state(self, s):
+    #    # you can not go inside walls and outside the grid
+    #    allowed_actions = []
+    #    i_coord, j_coord = state2idcs(s , self.maze)
+    #    for action in ['up', 'down', 'right', 'left']:
+    #        if action == 'up':  # up
+    #            s1_idcs = [i_coord - 1, j_coord]
+    #        elif action == 'down':  #  down
+    #            s1_idcs = [i_coord + 1, j_coord]
+    #        elif action == 'right':  #  right
+    #            s1_idcs = [i_coord, j_coord + 1]
+    #        else:  # left
+    #            s1_idcs = [i_coord, j_coord - 1]
+    #        s1_idcs = return_same_state_if_boundary([i_coord, j_coord], s1_idcs, self.maze)
+    #        if not np.array_equal([[i_coord, j_coord], s1_idcs]):
+    #            allowed_actions.append(action_str_to_num(action))
+    #    return allowed_actions
 
     def actions_allowed_in_state(self, s):
-        allowed = [0, 1, 2, 3]
-        return allowed
+        return [0, 1, 2, 3]
+
 
 

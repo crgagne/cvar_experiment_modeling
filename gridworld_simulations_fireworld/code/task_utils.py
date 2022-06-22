@@ -230,7 +230,7 @@ def build_P_from_maze(maze, n_states, n_actions, noise_mode, err_prob,
             s1_prob = get_next_state_prob_from_maze(s_idcs,a,maze,noise_mode,err_prob,order=order)
 
             # deal with aborbing states; probability = [0,0,0,..,1]; terminal state is always last state
-            if s in absorbing_states or s==terminal_state:
+            if s in absorbing_states or s == terminal_state:
                 s1_prob = np.zeros(n_states)
                 s1_prob[-1] = 1
 

@@ -105,6 +105,12 @@ def CVaR_DP(task,
 
                 alpha = alpha_set[alpha_i]
 
+
+
+                # fcvar fix
+                # do a loop in here for all alpha0 values
+                # use that to upgrade state value of fCVAR
+                #
                 ## update policy ##
                 if policy_to_evaluate is None:
                     if cvar_type=='fCVaR':
