@@ -72,8 +72,6 @@ def CVaR_DP(task,
 
         # these are just all the states
         states_to_iterate = task.states_allowed_at_time(t)
-        print(states_to_iterate)
-        #print(states_to_iterate)
 
         # loop over state space
         if parallel:
@@ -146,7 +144,7 @@ def CVaR_DP(task,
 
                         # otherwise use alpha_i
                         Q_CVaR[s,:,alpha_i,t] = np.round(Q_CVaR[s,:,alpha_i,t],Q_roundoff) # round Q-values so that 'numerical ties' are obvious; not necessary but cleaner for looking at policy
-                        Q_best = np.max(Q_CVaR[s,actions_allowed,alpha_i,t])
+                        Q_best = np.nanmax(Q_CVaR[s,actions_allowed,alpha_i,t])
                         best_actions = np.where(np.squeeze(Q_CVaR[s,:,alpha_i,t])==Q_best)[0]
 
                         filter=np.isin(best_actions,actions_allowed)
@@ -448,6 +446,8 @@ def Update_Q_Values(s,
 
 
     Q_CVaR_tmp = np.zeros((n_actions, Nalpha))
+    Q_CVaR_tmp[:, :] = np.nan
+
     Xis_tmp = np.zeros((n_actions, Nalpha, n_rewards, n_states))
 
     # loop over possible alphas
@@ -500,8 +500,8 @@ def Update_Q_Values(s,
                 p_rewards = task.p_rewards[s,non_zero_reward_idcs]
 
                 # get next states with non-zero transition prob
-                next_states = np.where(task.P[s,:,a]!=0.0)[0]
-                p_next_states = task.P[s,next_states,a]
+                next_states = np.where(task.P[s, :, a] != 0.0)[0]
+                p_next_states = task.P[s, next_states, a]
 
                 #import pdb; pdb.set_trace()
 
@@ -528,6 +528,8 @@ def Update_Q_Values(s,
                     Xis_tmp[a,alpha_i,non_zero_reward_idcs,next_states]=np.squeeze(xis)
                 except:
                     Xis_tmp[a,alpha_i,non_zero_reward_idcs,next_states]=np.nan
+
+            #print(Q_CVaR_tmp)
 
     return Q_CVaR_tmp,Xis_tmp
 

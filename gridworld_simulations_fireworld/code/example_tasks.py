@@ -71,6 +71,11 @@ task_six = TaskFireWorld(order='C', nrows=10, ncols=10,
                       goal_locations=[90],
                       task_name='task_six')
 
+task_mini = TaskFireWorld(order='C', nrows=3, ncols=3,
+                      start_location=0,
+                      fire_locations=[2, 7],
+                      goal_locations=[8],
+                      task_name='task_mini')
 
 if __name__ == '__main__':
     print(task_five)

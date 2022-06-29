@@ -22,11 +22,9 @@ save_stem = 'fireworld_2'
 
 
 ### Wrapper functions for computing policies, generating behavior and plotting for a selected task
-
-
 def main():
     # select task to use
-    task = example_tasks.task_five
+    task = example_tasks.task_mini
     only_plot = False
     gamma = 0.9
     time_horizon = 60
@@ -59,7 +57,7 @@ def main():
 
     # create behavior and plot
     plot_task(task=task, task_name=task.task_name, alpha_set=alpha_set, alpha0_set=alpha0_set,
-              alpha_plot_set=alpha_plot_set, model_names=['nCVaR'])
+              alpha_plot_set=alpha_plot_set, model_names=['nCVaR'], time_horizon=time_horizon)
     return None
 
 
@@ -73,7 +71,7 @@ def compute_policies(task,
                      verbose=True,
                      parallel=False,
                      ):
-    save_stem = 'fireworld_1'
+
     # create folders for results if necessary
     if not os.path.isdir('../saved_figures/' + save_stem + '/' + task_name):
         os.mkdir('../saved_figures/' + save_stem + '/' + task_name)
@@ -110,6 +108,7 @@ def compute_policies(task,
         savename = '../saved_results/' + save_stem + '/' + task_name + '/' + model_name + '_T=' + str(time_horizon) + \
                    '_interpset=' + str(len(alpha_set)) + '.p'
         # saving results
+        print('save in: ' + savename)
         pickle.dump(results, open(savename, "wb"))
         # free up results
         del results
@@ -136,13 +135,14 @@ def generate_behavior(task, savename, alpha_set, alpha0_set, time_horizon=60, mo
     if model_name == 'fCVaR':
         Q = Q[:, :, :, :, np.where(np.asarray(alpha0_set) == alpha0)[0][0]]
 
+
     # calculate policy using inverse temperature
     if invtemp == 'max':
         policy = np.zeros_like(Q)
         for s in range(policy.shape[0]):
             for alph in range(policy.shape[2]):
                 for t in range(policy.shape[3]):
-                    maxQ_i = np.argmax(Q[s, :, alph, t])
+                    maxQ_i = np.nanargmax(Q[s, :, alph, t])
                     policy[s, maxQ_i, alph, t] = 1.0
     else:
         policy = np.zeros_like(Q)
@@ -200,7 +200,7 @@ def plot_task(task,
             savename = '../saved_results/' + save_stem + '/' + save_stem_task + '/' + model_name + '_T=' + str(
                 time_horizon) + \
                        '_interpset=' + str(len(alpha_set)) + '.p'
-            # print(savename)
+
 
             print('Generating behavior for {} with alpha={}'.format(model_name, alpha))
             # print(task)
@@ -283,5 +283,6 @@ def plot_task(task,
 
 if __name__ == '__main__':
     main()
+
 
 
