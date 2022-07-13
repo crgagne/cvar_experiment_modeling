@@ -43,7 +43,7 @@ def calc_cvar_distorted_expectation(alpha,P_dist,Z_values):
     P_dist: original discrete probability distribution for Z.
     Z_values: values for the r.v.
        Note: correspond to the probabilities
-       Note: This can be return RV, or later V (return conditioned on each state)
+       Note: This can be return RV, or later state_values (return conditioned on each state)
        and in that case the density will be over
 
     Returns:

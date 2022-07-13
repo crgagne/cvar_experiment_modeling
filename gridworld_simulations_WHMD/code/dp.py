@@ -15,7 +15,7 @@ total=0
 
 def interpolate_V(V,state_next,alpha_next,alpha_set,t,debug=False):
     '''Interpolates CVaR value function between alpha levels.
-       Returns V(s,alpha)
+       Returns state_values(s,alpha)
     '''
 
     assert alpha_set[0]==0.0 # make sure 0 is part of interpolation
@@ -64,7 +64,7 @@ def distorted_value_objective_fun(dist_weights,
                                   gamma,
                                   cvar_type='pCVaR',
                                   debug=False,
-                                  interp_type='V'):
+                                  interp_type='state_values'):
 
     if np.any(np.isnan(dist_weights)):
         return(np.inf)
@@ -102,7 +102,7 @@ def Q_backup(next_states,
             multi_starts_N=10,
             same_answer_ns=3,
             same_answer_tol=1e-4,
-            interp_type='V',
+            interp_type='state_values',
             ):
 
         '''
@@ -119,7 +119,7 @@ def Q_backup(next_states,
 
             # find minimum next state value
             minV = np.min(V[next_states,0,t+1])
-            #minV_idcs = np.where(V[next_states,0,t+1]==minV)[0]
+            #minV_idcs = np.where(state_values[next_states,0,t+1]==minV)[0]
 
             # find the minimum reward
             minr = np.min(rewards)
@@ -365,7 +365,7 @@ def CVaR_DP(task,
             alpha_set = np.array([0,0.01,0.05,0.1,0.2,0.3,0.5,0.7,0.9,1.0]),
             cvar_type='pCVaR',
             gamma=1.0,
-            interp_type='V',
+            interp_type='state_values',
             policy_to_evaluate=None,
             Q_roundoff=4,
             verbose=True,

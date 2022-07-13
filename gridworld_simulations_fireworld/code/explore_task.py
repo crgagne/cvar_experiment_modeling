@@ -16,21 +16,22 @@ import example_tasks
 import gc
 
 
-### fireworld_1: first implementation of the environment, allows for doing nothing by moving outside the world
-### fireworld_2: different branch, does not allow moving outside the world
+# fireworld_1: first implementation of the environment, allows for doing nothing by moving outside the world
+# fireworld_2: different branch, does not allow moving outside the world
+
 save_stem = 'fireworld_1'
 
 
-### Wrapper functions for computing policies, generating behavior and plotting for a selected task
+# Wrapper functions for computing policies, generating behavior and plotting for a selected task
 
 
 def main():
     # select task to use
-    task = example_tasks.task_six
+    task = example_tasks.task_mini
     only_plot = False
     gamma = 0.9
-    time_horizon = 60
-    parallel = True
+    time_horizon = 5
+    parallel = False
 
     interpolation_set = np.array([0., 0.01, 0.01274275, 0.01623777, 0.02069138,
                                   0.02636651, 0.03359818, 0.04281332, 0.05455595, 0.06951928,
@@ -55,11 +56,11 @@ def main():
     # compute policies
     if not only_plot:
         path_dict = compute_policies(task=task, task_name=task.task_name, alpha_set=alpha_set, alpha0_set=alpha0_set,
-                                     time_horizon=time_horizon, model_names=['pCVaR', 'nCVaR', 'fCVaR'], gamma=gamma, parallel=parallel)
+                                     time_horizon=time_horizon, model_names=['fCVaR'], gamma=gamma, parallel=parallel)
 
     # create behavior and plot
     plot_task(task=task, task_name=task.task_name, alpha_set=alpha_set, alpha0_set=alpha0_set,
-              alpha_plot_set=alpha_plot_set, model_names=['pCVaR', 'nCVaR', 'fCVaR'])
+              alpha_plot_set=alpha_plot_set, model_names=['fCVaR'])
     return None
 
 
@@ -92,7 +93,7 @@ def compute_policies(task,
             qs = []
             for alpha0 in alpha0_set:
                 start_time_alpha = time.time()
-
+                print(time_horizon)
                 results = CVaR_DP(task, T=time_horizon, alpha0=alpha0, alpha_set=alpha_set, cvar_type=model_name,
                                   gamma=0.9, verbose=True, parallel=parallel)
                 qs.append(results['Q_CVaR'])
@@ -164,7 +165,7 @@ def generate_behavior(task, savename, alpha_set, alpha0_set, time_horizon=60, mo
                                   policy,  # must be states x actions x alphas x time-steps
                                   gamma,
                                   T=time_horizon,
-                                  Nsims=Nsims,
+                                  n_sims=Nsims,
                                   s0=task.start_location,
                                   alpha_i0=alpha0_i,
                                   alpha_set=alpha_set,
@@ -193,7 +194,7 @@ def plot_task(task,
 
         for alpha in alpha_plot_set:
 
-            Nsims = 1000
+            n_sims = 1000
             invtemp = 'max'
             alpha0_i = np.where(np.asarray(alpha_set) == alpha)[0][0]
 
@@ -211,14 +212,15 @@ def plot_task(task,
                                                       model_name=model_name,
                                                       alpha0=alpha,
                                                       invtemp=invtemp,
-                                                      Nsims=Nsims)
+                                                      Nsims=n_sims)
 
             # print('Finished Generating behavior')
             print('Plotting trajectories...')
+            # sum over all simulations, drop terminal state, get average by dividing through nsims
+            sa_occupancy = results_mcmc['first_sa_occup'].sum(axis=0)[0:-1, :] / n_sims
+
             if model_name == 'pCVaR':
                 # special stuff for pcvar
-                sa_occupancy = results_mcmc['first_sa_occup'].sum(axis=0)[0:-1, :]
-                sa_occupancy = sa_occupancy / Nsims
                 med_alpha_per_state = []
                 mean_alpha_per_state = []
                 for s in range(task.n_states):
@@ -227,14 +229,10 @@ def plot_task(task,
                 med_alpha_per_state = np.array(med_alpha_per_state)
                 mean_alpha_per_state = np.array(mean_alpha_per_state)
                 max_sa_occupancy = np.max(sa_occupancy, axis=1)  # [0:(task.Ns-1)]#.reshape(task.maze.shape)
-                print(max_sa_occupancy.shape)
-
                 med_alpha_per_state_masked = med_alpha_per_state[0:(task.n_states - 1)].copy()
                 med_alpha_per_state_masked[max_sa_occupancy <= 0.05] = 0.0
 
                 fig, ax = plt.subplots(1, 1, figsize=(7, 4), dpi=300)
-
-                print('starting plotting function')
                 fig = plot_sa(sa_occupancy,
                               med_alpha_per_state_masked,  # np.round(med_alpha_per_state[0:(task.Ns-1)],2),
                               task,
@@ -249,10 +247,6 @@ def plot_task(task,
                               min_plot=0.05, title_fs=26, start_fs=18, reward_fs=12, value_fs=14, show_alpha0=True)
             else:
                 fig, ax = plt.subplots(1, 1, figsize=(7, 4), dpi=300)
-
-                sa_occupancy = results_mcmc['first_sa_occup'].sum(axis=0)[0:-1, :]
-                sa_occupancy = sa_occupancy / Nsims
-
                 fig = plot_sa(sa_occupancy,
                               np.zeros(task.n_states - 1),
                               task,
@@ -264,16 +258,16 @@ def plot_task(task,
                               ax=ax,
                               finish=True,
                               pi_color='blue', min_plot=0.05, title_fs=26, start_fs=18, reward_fs=12, show_alpha0=False)
-            # save plot
-            # store plot for each alpha
-            fig_savepath = '../saved_figures/' + save_stem + '/' + save_stem_task + '/' + model_name + '/' + 'alpha=' + str(
-                alpha) + '.png'
-            # make directory for each model
-            if not os.path.isdir('../saved_figures/' + save_stem + '/' + task_name + '/' + model_name):
-                os.mkdir('../saved_figures/' + save_stem + '/' + task_name + '/' + model_name)
 
+            # save plot
+            # make directory for each model
+            save_dir = f'../saved_figures/{save_stem}/{task_name}/{model_name}'
+            if not os.path.isdir(save_dir):
+                os.mkdir(save_dir)
+            # store plot for each alpha
+            fig_savepath = f'{save_dir}/alpha={alpha}.png'
             fig.savefig(fig_savepath, format='png')
-            print('saved figure for {} with alpha: {} in'.format(model_name, alpha) + fig_savepath)
+            print(f'saved figure for {model_name} with alpha: {alpha} in {fig_savepath}')
 
             del fig
             del results

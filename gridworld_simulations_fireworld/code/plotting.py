@@ -185,7 +185,7 @@ def plot_q_or_pi(Q, V, title, ax, maze, q_or_pi='q', Qrange=None, roundoff=3, an
                                                                                                             int(n_colors / 2))
         # if invert_colors:
         #     cm_Q = cm_Q[::-1]
-        #     Qrange = Qrange[::-1]
+        #     q_range = q_range[::-1]
         Qrange_discrete = list(np.linspace(Qrange[0], -1 * Qrange[1] / (n_colors / 2), int(n_colors / 2))) + \
                           [0] + \
                           list(np.linspace(Qrange[1] / (n_colors / 2),
@@ -205,7 +205,7 @@ def plot_q_or_pi(Q, V, title, ax, maze, q_or_pi='q', Qrange=None, roundoff=3, an
         if Qrange is None:
             maxV = np.max(np.abs(V))
             Qrange = [0, maxV]
-            # print(Qrange)
+            # print(q_range)
 
         Qrange_discrete = list(np.linspace(Qrange[0], Qrange[1], n_colors))
         cm_empty = 0
@@ -353,14 +353,15 @@ def embellish_plot(ax, maze, rewards, s0_py, cost, corner_labels, color_agent='b
     ax.patch.set_linewidth(str(outer_lw))
 
 
-def plot_sa(Q, V, task, alpha_set, alpha_idx, model_name, q_or_pi='q',
-            fig=None, ax=None, Qrange=None, extra_title='', order='C', finish=False, roundoff=2,
+def plot_sa(sa_occupancy, state_values, task, alpha_set, alpha_idx, model_name, q_or_pi='q',
+            fig=None, ax=None, q_range=None, extra_title='', order='C', finish=False, round_off=2,
             pi_color='blue', min_plot=0.01, title_fs=20, start_fs=16, reward_fs=12, value_fs=14, show_alpha0=False):
+
     if fig is None:
         fig, ax = plt.subplots(1, 1, figsize=(6, 6), dpi=100)
 
-    if Qrange is None:
-        Qrange = [np.min(Q), np.max(Q)]
+    if q_range is None:
+        q_range = [np.min(sa_occupancy), np.max(sa_occupancy)]
 
     if finish:
         tri_add_labels = False
@@ -369,7 +370,7 @@ def plot_sa(Q, V, task, alpha_set, alpha_idx, model_name, q_or_pi='q',
         tri_add_labels = True
         corner_labels = True
 
-    if np.max(V) > 0.01:
+    if np.max(state_values) > 0.01:
         plot_value = True
         annot_value = True
     else:
@@ -377,18 +378,18 @@ def plot_sa(Q, V, task, alpha_set, alpha_idx, model_name, q_or_pi='q',
         annot_value = False
 
     print('plot_q')
-    plot_q_or_pi(Q,
-                 V.reshape(task.maze.shape, order=order),
+    plot_q_or_pi(sa_occupancy,
+                 state_values.reshape(task.maze.shape, order=order),
                  '',
                  ax,
                  task.maze,
                  q_or_pi=q_or_pi,
-                 roundoff=roundoff,
+                 roundoff=round_off,
                  inc_triangles=True,
                  tri_add_labels=tri_add_labels,
                  annot_value=annot_value,
                  plot_value=plot_value,
-                 Qrange=Qrange,
+                 Qrange=q_range,
                  term_states_for_plotting=task.absorbing_states,
                  n_colors=100,
                  pi_color=pi_color,

@@ -162,7 +162,7 @@ def plot_q_or_pi(Q,V,title,ax,maze,q_or_pi='q',Qrange=None,roundoff=3,annot_valu
         cm_Q = sns.light_palette("red",int(n_colors/2))[::-1]+[(0.96, 0.96, 0.96)]+sns.light_palette("green",int(n_colors/2))
         # if invert_colors:
         #     cm_Q = cm_Q[::-1]
-        #     Qrange = Qrange[::-1]
+        #     q_range = q_range[::-1]
         Qrange_discrete = list(np.linspace(Qrange[0],-1*Qrange[1]/(n_colors/2),int(n_colors/2)))+\
                           [0]+\
                           list(np.linspace(Qrange[1]/(n_colors/2),
@@ -182,7 +182,7 @@ def plot_q_or_pi(Q,V,title,ax,maze,q_or_pi='q',Qrange=None,roundoff=3,annot_valu
         if Qrange is None:
             maxV = np.max(np.abs(V))
             Qrange = [0,maxV]
-            #print(Qrange)
+            #print(q_range)
 
         Qrange_discrete = list(np.linspace(Qrange[0],Qrange[1],n_colors))
         cm_empty=0
