@@ -58,7 +58,6 @@ def CVaR_DP(task,
     ######################################
     # work backwards from last time step #
     ######################################
-    print(T)
     for t in reversed(range(0, T)):
         if verbose:
             print('t=' + str(t))
@@ -139,7 +138,6 @@ def CVaR_DP(task,
 
                         # update CVaR state value using state,action value using current alpha in loop (transfering distribution from chosen action)
                         Q_best = Q_CVaR[s, best_action, alpha_i, t]
-                        print('For alpha_i {}, alpha0 {}, Qbest {}'.format(alpha_i, alpha0_i, Q_best))
                         V_CVaR[s, alpha_i, t] = Q_best
 
 
@@ -171,7 +169,7 @@ def CVaR_DP(task,
                     V_CVaR[s, alpha_i, t] = np.sum(policy_to_evaluate[s, :, alpha_i, t] * Q_CVaR[s, :, alpha_i, t])
 
     output = {'Q_CVaR': Q_CVaR, 'pi': pi, 'V_CVaR': V_CVaR, 'Xis': Xis}
-    pdb.set_trace()
+    #pdb.set_trace()
 
     print(total)
     print(break_early1)

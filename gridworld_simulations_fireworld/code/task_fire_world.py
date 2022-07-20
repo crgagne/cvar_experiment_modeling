@@ -50,6 +50,7 @@ class TaskFireWorld:
             either 'C': columns first or rows first
         """
         self.task_name = task_name
+        self.order = order
         # number of states
         self.n_states = nrows * ncols + 1  # with terminal state
         # array representing world
@@ -119,7 +120,8 @@ class TaskFireWorld:
         for state in range(self.n_states):
             if state in self.reward_dicts.keys():
                 r = self.reward_dicts[state]
-
+            if state in self.wall_locations:
+                r = 0
             else:
                 r = self.step_penalty  # fill in all non-rewarded states with reward = -0.1, find suitable value
             self.rewards[state] = r

@@ -96,7 +96,6 @@ def run_task(task,
     alpha_i = alpha0_i
     # corresponding alpha
     alpha = alpha_set[alpha_i]
-
     for t in range(T):
 
         # last action slip

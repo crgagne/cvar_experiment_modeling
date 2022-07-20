@@ -4,7 +4,7 @@ import matplotlib
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-from IPython.display import Image, display
+#from IPython.display import Image, display
 from matplotlib.offsetbox import TextArea, DrawingArea, OffsetImage, AnnotationBbox
 from matplotlib.colors import LinearSegmentedColormap
 
@@ -53,6 +53,34 @@ def add_walls(ax, maze):
         wcoord = wall_loc_coords[i, :]
         ax.add_patch(
             patches.Rectangle((wcoord[1] - 0.5, wcoord[0] - 0.5), 1, 1, linewidth=1, edgecolor='k', facecolor='k'))
+
+
+def plot_rewards(ax, task, reward_fontsize, center_rewards=False):
+    rewards = task.rewards
+    reward_states = np.where(rewards != 0)[0]
+    for gs in reward_states:
+        # for now only one rewards per state
+        rs = np.unique(rewards[gs])[0]
+        # cast to int if no dezimal places
+        if rs % 1 == 0:
+            r_str = str(int(rs))
+        else:
+            r_str = str(rs)
+        if rs > 0:
+            # green for positive rewards
+            color = sns.color_palette()[2]
+            r_str = '+' + r_str
+        else:
+            # red for negative
+            color = sns.color_palette()[3]
+
+        s_idcs = state2idcs(gs, task.maze, order=task.order)
+        if not center_rewards:
+            x_offset = -0.45
+        else:
+            x_offset = -0.1
+        ax.text(s_idcs[1] + x_offset, s_idcs[0] + 0.45, 'r = ' + r_str, fontsize=reward_fontsize, color=color,
+                bbox=dict(edgecolor='white', facecolor='white', alpha=0, pad=2))
 
 
 def add_triangles(ax, maze, cm, add_labels=False, fs=5, cm_empty=10, ec=(0.4, 0.4, 0.4, 0.1), ls='-',
@@ -345,7 +373,6 @@ def embellish_plot(ax, maze, rewards, s0_py, cost, corner_labels, color_agent='b
 
     plt.xticks([])
     plt.yticks([])
-
     plt.tight_layout()
 
     # darken the outside
