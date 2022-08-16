@@ -29,10 +29,11 @@ save_stem = 'fireworld_1'
 def main():
 
     # select task to use
-    task = example_tasks.task_mini
+    task = example_tasks.task_straight
     only_plot = False
+    plot_in_one = True
     gamma = 0.9
-    time_horizon = 5
+    time_horizon = 60
     parallel = True
 
     interpolation_set = np.array([0., 0.01, 0.01274275, 0.01623777, 0.02069138,
@@ -46,8 +47,10 @@ def main():
     alpha0_set = [interpolation_set[i] for i in alpha0_i_set]
     # alpha_set = [interpolation_set[i] for i in alpha0_i_set]
     alpha_set = interpolation_set
-    alpha_plot_set = alpha0_set
+    # alpha_plot_index = [11, 14, 16, 18]
+    alpha_plot_index = [12, 13, 15, 17]
 
+    alpha_plot_set = interpolation_set[alpha_plot_index]
     if not os.path.isdir('../saved_figures/' + save_stem):
         os.mkdir('../saved_figures/' + save_stem)
 
@@ -60,7 +63,11 @@ def main():
                                      time_horizon=time_horizon, model_names=['pCVaR', 'nCVaR'], gamma=gamma, parallel=parallel)
 
     # create behavior and plot
-    plot_task(task=task, task_name=task.task_name, alpha_set=alpha_set, alpha0_set=alpha0_set,
+    if plot_in_one:
+        plot_task_in_one(task=task, alpha0_set=alpha0_set, alpha_set=alpha_set,
+                         alpha_plot_set=alpha_plot_set, model_names=['pCVaR', 'nCVaR'], time_horizon=60)
+    else:
+        plot_task(task=task, task_name=task.task_name, alpha_set=alpha_set, alpha0_set=alpha0_set,
               alpha_plot_set=alpha_plot_set, time_horizon=time_horizon, model_names=['pCVaR', 'nCVaR'])
     return None
 
@@ -226,7 +233,7 @@ def plot_task_in_one(task,
     save_dir = f'../saved_figures/{save_stem}/{task.task_name}'
     if not os.path.isdir(save_dir):
         os.mkdir(save_dir)
-    fig_savepath = f'{save_dir}/alpha={alpha_plot_set}.png'
+    fig_savepath = f'{save_dir}/alpha={np.around(alpha_plot_set, 2)}.png'
     fig.savefig(fig_savepath, format='png')
 
 
@@ -320,7 +327,7 @@ def plot_task(task,
             if not os.path.isdir(save_dir):
                 os.mkdir(save_dir)
             # store plot for each alpha
-            fig_savepath = f'{save_dir}/alpha={alpha}.png'
+            fig_savepath = f'{save_dir}/alpha={np.round(alpha, 2)}.png'
             fig.savefig(fig_savepath, format='png')
             print(f'saved figure for {model_name} with alpha: {alpha} in {fig_savepath}')
 

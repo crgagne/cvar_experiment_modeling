@@ -75,5 +75,30 @@ task_mini = TaskFireWorld(order='C', nrows=3, ncols=3,
                           goal_locations=[8],
                           task_name='task_mini')
 
+
+task_fireplaces_2 = TaskFireWorld(order='C', nrows=10, ncols=10,
+                                start_location=0,
+                                fire_locations=[13, 23, 33, 21, 31, 41, 62, 72, 54, 64, 92, 93, 94, 35, 36, 37, 76],
+                                wall_locations=[48, 58, 68, 78, 88],
+                                goal_locations=[56],
+                                task_name='task_fireplaces_2')
+
+task_five_ways = TaskFireWorld(order='C', nrows=10, ncols=10,
+                         start_location=40,
+                         fire_locations=[11, 17, 36, 37, 45, 46, 47, 52, 65, 66, 68 ,88],
+                         wall_locations=[12, 13, 14, 15, 16, 18, 21, 22, 31, 32, 34, 35, 44, 51, 62, 63, 64, 78,
+                                         81, 82, 83, 84, 85, 86, 87],
+                         goal_locations=[59],
+                         task_name='task_five_ways')
+
+task_straight = TaskFireWorld(order='C', nrows=10, ncols=10,
+                         start_location=40,
+                         fire_locations=[11, 12, 32, 52, 36, 56, 37, 57, 86, 87],
+                         wall_locations=[11, 21, 31, 51, 61, 71, 81, 33,
+                                         15, 25, 35, 55, 65, 75, 85, 17, 27, 67, 77, 53, 63, 73, 83, 82, 16, 13, 23],
+                         goal_locations=[48],
+                         task_name='task_straight')
+
+
 if __name__ == '__main__':
     print(task_five)

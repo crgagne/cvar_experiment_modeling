@@ -120,7 +120,7 @@ class TaskFireWorld:
         for state in range(self.n_states):
             if state in self.reward_dicts.keys():
                 r = self.reward_dicts[state]
-            if state in self.wall_locations:
+            elif state in self.wall_locations:
                 r = 0
             else:
                 r = self.step_penalty  # fill in all non-rewarded states with reward = -0.1, find suitable value
@@ -141,8 +141,8 @@ class TaskFireWorld:
         return np.array2string(reward_maze)
 
     def states_allowed_at_time(self, t):
-        # all states are allowed, except wall states
-        return [s for s in range(self.n_states) if s not in self.wall_locations]
+        # all states are allowed
+        return [s for s in range(self.n_states)]
 
     #def actions_allowed_in_state(self, s):
     #    # you can not go inside walls and outside the grid
